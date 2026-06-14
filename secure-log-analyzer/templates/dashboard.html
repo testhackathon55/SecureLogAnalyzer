@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Secure Cloud Log Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .navbar h1 {
+            font-size: 1.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .welcome-card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .upload-section, .analyze-section {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f9f9f9;
+        }
+
+        .upload-area.drag-over {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 1rem;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .results pre {
+            background: #f4f4f4;
+            padding: 1rem;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-card {
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+            
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>🔒 Secure Cloud Log Analyzer</h1>
+        <div class="nav-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/upload" id="uploadLink">Upload Logs</a>
+            <a href="/analyze" id="analyzeLink">Analyze</a>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="welcome-card">
+            <h2>Welcome, <span id="username"></span>!</h2>
+            <p>This is your secure log analysis dashboard. Upload log files to analyze system errors and traffic patterns using parallel MapReduce processing.</p>
+        </div>
+
+        <div class="upload-section">
+            <h3>📁 Upload Log File</h3>
+            <div class="upload-area" id="uploadArea">
+                <p>📄 Drag & drop your log file here or click to browse</p>
+                <input type="file" id="fileInput" accept=".log,.txt">
+            </div>
+            <button id="uploadBtn" disabled>Upload File</button>
+            <div class="loading" id="uploadLoading">
+                <div class="spinner"></div>
+                <p>Processing your file with MapReduce...</p>
+            </div>
+            <div class="results" id="uploadResults">
+                <h4>Analysis Results:</h4>
+                <pre id="uploadResultsPre"></pre>
+            </div>
+        </div>
+
+        <div class="analyze-section">
+            <h3>🔍 Analyze Sample Log</h3>
+            <button id="analyzeBtn">Run Analysis on Sample Log</button>
+            <div class="loading" id="analyzeLoading">
+                <div class="spinner"></div>
+                <p>Analyzing with MapReduce...</p>
+            </div>
+            <div class="results" id="analyzeResults">
+                <h4>Sample Analysis Results:</h4>
+                <div id="analyzeStats" class="stats-grid"></div>
+                <pre id="analyzeResultsPre"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        
+        // Get username from session
+        fetch('/api/user')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('username').textContent = data.username;
+            });
+        
+        // Upload area handlers
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            selectedFile = e.dataTransfer.files[0];
+            uploadBtn.disabled = false;
+            uploadArea.style.borderColor = '#3c3';
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            selectedFile = e.target.files[0];
+            uploadBtn.disabled = false;
+        });
+        
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            document.getElementById('uploadLoading').style.display = 'block';
+            document.getElementById('uploadResults').style.display = 'none';
+            uploadBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('uploadLoading').style.display = 'none';
+                document.getElementById('uploadResults').style.display = 'block';
+                
+                if (response.ok) {
+                    displayResults(result.data, 'uploadResultsPre');
+                } else {
+                    document.getElementById('uploadResultsPre').textContent = 'Error: ' + result.error;
+                }
+            } catch (error) {
+                document.getElementById('uploadLoading').style.display = 'none';
+                document.getElementById('uploadResults').style.display = 'block';
+                document.getElementById('uploadResultsPre').textContent = 'Error uploading file';
+            }
+            
+            uploadBtn.disabled = false;
+        });
+        
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            document.getElementById('analyzeLoading').style.display = 'block';
+            document.getElementById('analyzeResults').style.display = 'none';
+            
+            try {
+                const response = await fetch('/analyze');
+                const result = await response.json();
+                
+                document.getElementById('analyzeLoading').style.display = 'none';
+                document.getElementById('analyzeResults').style.display = 'block';
+                
+                if (response.ok) {
+                    displayStats(result.data);
+                    displayResults(result.data, 'analyzeResultsPre');
+                } else {
+                    document.getElementById('analyzeResultsPre').textContent = 'Error: ' + result.error;
+                }
+            } catch (error) {
+                document.getElementById('analyzeLoading').style.display = 'none';
+                document.getElementById('analyzeResults').style.display = 'block';
+                document.getElementById('analyzeResultsPre').textContent = 'Error analyzing file';
+            }
+        });
+        
+        function displayStats(data) {
+            const statsGrid = document.getElementById('analyzeStats');
+            statsGrid.innerHTML = '';
+            
+            // Extract status codes
+            const statusCodes = {};
+            const hours = {};
+            
+            for (const [key, value] of Object.entries(data)) {
+                if (key.startsWith('Hour_')) {
+                    hours[key.replace('Hour_', '')] = value;
+                } else if (/^\d{3}$/.test(key)) {
+                    statusCodes[key] = value;
+                }
+            }
+            
+            if (Object.keys(statusCodes).length > 0) {
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <div class="stat-value">${Object.values(statusCodes).reduce((a, b) => a + b, 0)}</div>
+                    <div class="stat-label">Total HTTP Requests</div>
+                    <div style="margin-top: 10px; font-size: 12px;">
+                        ${Object.entries(statusCodes).map(([code, count]) => `${code}: ${count}`).join('<br>')}
+                    </div>
+                `;
+                statsGrid.appendChild(statCard);
+            }
+            
+            if (Object.keys(hours).length > 0) {
+                const peakHour = Object.entries(hours).reduce((a, b) => a[1] > b[1] ? a : b);
+                const statCard = document.createElement('div');
+                statCard.className = 'stat-card';
+                statCard.innerHTML = `
+                    <div class="stat-value">${peakHour[0]}:00</div>
+                    <div class="stat-label">Peak Traffic Hour</div>
+                    <div style="margin-top: 10px; font-size: 12px;">${peakHour[1]} requests</div>
+                `;
+                statsGrid.appendChild(statCard);
+            }
+        }
+        
+        function displayResults(data, elementId) {
+            const pre = document.getElementById(elementId);
+            pre.textContent = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
